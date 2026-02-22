@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Planforge.Api/Planforge.Api.csproj" />
+  <Project Path="Planforge.Application/Planforge.Application.csproj" />
+  <Project Path="Planforge.Domain/Planforge.Domain.csproj" />
+  <Project Path="Planforge.Infrastructure/Planforge.Infrastructure.csproj" />
+</Solution>
