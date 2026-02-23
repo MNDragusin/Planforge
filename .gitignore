@@ -1,6 +1,20 @@
-bin/
-obj/
-/packages/
-riderModule.iml
-/_ReSharper.Caches/
+# --- Build Artifacts ---
+# The **/ prefix ensures it finds bin/obj in every sub-project folder
+**/bin/
+**/obj/
+
+# --- IDE / Tooling ---
 .idea/
+.vscode/
+.vs/
+*.sln.DotSettings.user
+*.user
+riderModule.iml
+_ReSharper.Caches/
+
+# --- NuGet ---
+packages/
+
+# Catch the literal backslash folders created by Windows-based tooling
+*bin\\*
+*obj\\*
