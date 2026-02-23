@@ -5,7 +5,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Planforge.Application.DTOs;
+using Planforge.Domain.Entities;
+using Planforge.Domain.Enums;
 using Planforge.Infrastructure.Identity;
+using Planforge.Infrastructure.Persistence;
 
 namespace Planforge.Api.Controllers;
 
@@ -14,12 +17,14 @@ namespace Planforge.Api.Controllers;
 public class AuthController: ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
 
-    public AuthController(UserManager<ApplicationUser> userManager, IConfiguration configuration)
+    public AuthController(UserManager<ApplicationUser> userManager, IConfiguration configuration,  AppDbContext context)
     {
         _userManager = userManager;
         _configuration = configuration;
+        _context = context;
     }
 
     [HttpPost("login")]
@@ -51,6 +56,14 @@ public class AuthController: ControllerBase
 
         var result = await _userManager.CreateAsync(user, registerRequest.Password);
 
+        var org = new Organization(registerRequest.Name + "' Workspace");
+        _context.Organizations.Add(org);
+        
+        var membership = new Membership(user.Id, org.Id, OrganizationRole.Owner);
+        _context.Memberships.Add(membership);
+        
+        await _context.SaveChangesAsync();
+        
         if (!result.Succeeded)
         {
             return BadRequest(result.Errors);
@@ -60,8 +73,8 @@ public class AuthController: ControllerBase
         return Ok(new  RegisterResponse(await  GenerateJwtToken(user)));
     }
 
-    [HttpPost("delete")]
-    public async Task<IActionResult> Delete()
+    [HttpPost("deactivate")]
+    public async Task<IActionResult> DeactivateAccount()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
         if (userId == null)
