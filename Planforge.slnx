@@ -3,4 +3,5 @@
   <Project Path="Planforge.Application/Planforge.Application.csproj" />
   <Project Path="Planforge.Domain/Planforge.Domain.csproj" />
   <Project Path="Planforge.Infrastructure/Planforge.Infrastructure.csproj" />
+  <Project Path="Planforge.Tests/Planforge.Tests.csproj" />
 </Solution>
