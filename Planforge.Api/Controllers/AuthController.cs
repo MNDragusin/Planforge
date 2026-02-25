@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -28,6 +29,8 @@ public class AuthController: ControllerBase
     }
 
     [HttpPost("login")]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(LoginRequest loginRequest)
     {
         var user = await _userManager.FindByEmailAsync(loginRequest.Email);
@@ -40,6 +43,8 @@ public class AuthController: ControllerBase
     }
 
     [HttpPost("register")]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register(RegisterRequest registerRequest)
     {
         var user = await _userManager.FindByEmailAsync(registerRequest.Email);
@@ -73,7 +78,12 @@ public class AuthController: ControllerBase
         return Ok(new  RegisterResponse(await  GenerateJwtToken(user)));
     }
 
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [HttpPost("deactivate")]
+    [Authorize]
     public async Task<IActionResult> DeactivateAccount()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
