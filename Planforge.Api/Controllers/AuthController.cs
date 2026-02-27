@@ -1,11 +1,10 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Planforge.Application.Common.Enums;
 using Planforge.Application.Common.Interfaces;
 using Planforge.Application.DTOs;
-using Planforge.Infrastructure.Identity;
-using Planforge.Infrastructure.Persistence;
 
 namespace Planforge.Api.Controllers;
 
@@ -13,16 +12,10 @@ namespace Planforge.Api.Controllers;
 [Route("api/[controller]")]
 public class AuthController: ControllerBase
 {
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly AppDbContext _context;
-    private readonly IConfiguration _configuration;
     private readonly IUserAuthService _userAuthService;
 
-    public AuthController(UserManager<ApplicationUser> userManager, IConfiguration configuration,  AppDbContext context, IUserAuthService userAuthService)
+    public AuthController(IUserAuthService userAuthService)
     {
-        _userManager = userManager;
-        _configuration = configuration;
-        _context = context;
         _userAuthService = userAuthService;
     }
 
@@ -34,7 +27,7 @@ public class AuthController: ControllerBase
         var result = await _userAuthService.Login(loginRequest);
         if (!result.IsSuccessful)
         {
-            return Unauthorized();
+            return MapToErrorActionResult(result);
         }
         
         return Ok(result.Result);
@@ -48,14 +41,10 @@ public class AuthController: ControllerBase
         var registerRespons = await _userAuthService.Register(registerRequest);
         if (!registerRespons.IsSuccessful)
         {
-            if (registerRespons.Errors != null)
-            {
-                return BadRequest(registerRespons.Errors);
-            }
-            
-            return BadRequest(registerRespons.Result);
+            return MapToErrorActionResult(registerRespons);
         }
-        return Ok(new  RegisterResponse(registerRespons.Result!));
+        
+        return Ok(registerRespons.Result);
     }
 
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -66,7 +55,7 @@ public class AuthController: ControllerBase
     [Authorize]
     public async Task<IActionResult> DeactivateAccount()
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier).Value;
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
         if (string.IsNullOrEmpty(userId))
         {
@@ -76,14 +65,31 @@ public class AuthController: ControllerBase
         
         if (!result.IsSuccessful)
         {
-            if (result.Errors != null)
-            {
-                return BadRequest(result.Errors);
-            }
-            
-            return NotFound();
+            return MapToErrorActionResult(result);
         }
         
         return Ok("Account has been deleted");
+    }
+
+    private IActionResult MapToErrorActionResult<T>(IServiceResult<T> result)
+    {
+        switch (result.ErrorType)
+        {
+            case ServiceErrorType.BadRequest:
+                return BadRequest(result.Errors);
+            case ServiceErrorType.NotFound:
+                return NotFound(result.Message);
+                break;
+            case ServiceErrorType.Unauthorized:
+                return Unauthorized(result.Message);
+                break;
+            case ServiceErrorType.InternalError:
+                return ValidationProblem(result.Message);
+                break;
+            default:
+                break;
+        }
+
+        throw new NotImplementedException();
     }
 }

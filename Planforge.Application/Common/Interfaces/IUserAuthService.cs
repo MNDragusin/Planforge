@@ -4,7 +4,7 @@ namespace Planforge.Application.Common.Interfaces;
 
 public interface IUserAuthService
 {
-    Task<IServiceResult> Login(LoginRequest loginRequest);
-    Task<IServiceResult> DeactivateAccount(string userId);
-    Task<IServiceResult> Register(RegisterRequest request);
+    Task<IServiceResult<LoginResponse>> Login(LoginRequest loginRequest);
+    Task<IServiceResult<bool>> DeactivateAccount(string userId);
+    Task<IServiceResult<RegisterResponse>> Register(RegisterRequest request);
 }

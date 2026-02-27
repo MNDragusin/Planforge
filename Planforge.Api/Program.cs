@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Planforge.Api.Middleware;
 using Planforge.Api.Services;
+using Planforge.Application;
 using Planforge.Application.Common.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +13,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddInfrastructure(builder.Configuration);
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
@@ -33,6 +33,9 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
+
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication(builder.Configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();

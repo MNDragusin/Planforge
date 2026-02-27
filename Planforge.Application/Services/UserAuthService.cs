@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Planforge.Application.Common.Enums;
 using Planforge.Application.Common.Interfaces;
 using Planforge.Application.DTOs;
 using Planforge.Domain.Entities;
@@ -26,42 +27,28 @@ public class UserAuthService : IUserAuthService
         _configuration = configuration;
     }
 
-    public async Task<IServiceResult> Login(LoginRequest loginRequest)
+    public async Task<IServiceResult<LoginResponse>> Login(LoginRequest loginRequest)
     {
         var user = await _userManager.FindByEmailAsync(loginRequest.Email);
-        if (user == null || user.IsDeleted || !await _userManager.CheckPasswordAsync(user, loginRequest.Password))
+        if (user == null || !await _userManager.CheckPasswordAsync(user, loginRequest.Password))
         {
-            return new ServiceResult(false);;
+            return ServiceResult<LoginResponse>.Failure("Invalid username or password", ServiceErrorType.BadRequest);
+        }
+
+        if (user.IsDeleted)
+        {
+            return ServiceResult<LoginResponse>.Failure("User is deleted", ServiceErrorType.NotFound);
         }
         
-        return new ServiceResult(true, await GenerateJwtToken(user));
+        return ServiceResult<LoginResponse>.Success(new LoginResponse(await GenerateJwtToken(user)));
     }
-
-    public async Task<IServiceResult> DeactivateAccount(string userId)
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
-        {
-            return new ServiceResult(false);;
-        }
-        
-        //soft delete
-        user.IsDeleted = true;
-        user.DeletedOn = DateTime.UtcNow;
-        
-        //invalidate login
-        user.LockoutEnd = DateTimeOffset.MaxValue;
-        
-        var result = await _userManager.UpdateAsync(user);
-        return new ServiceResult(result.Succeeded, string.Empty, result.Errors);
-    }
-
-    public async Task<IServiceResult> Register(RegisterRequest request)
+    
+    public async Task<IServiceResult<RegisterResponse>> Register(RegisterRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user != null)
         {
-            return new ServiceResult(false, "User already exists");
+            return ServiceResult<RegisterResponse>.Failure("User already exists", ServiceErrorType.BadRequest);
         }
 
         user = new ApplicationUser()
@@ -82,11 +69,35 @@ public class UserAuthService : IUserAuthService
         
         if (!result.Succeeded)
         {
-            return new ServiceResult(false, null,result.Errors);
+            return ServiceResult<RegisterResponse>.Failure("Bad Request", ServiceErrorType.BadRequest, result.Errors);
         }
         
         await _userManager.AddToRoleAsync(user, "Admin");
-        return new ServiceResult(true, await  GenerateJwtToken(user));
+        return ServiceResult<RegisterResponse>.Success(new RegisterResponse(await GenerateJwtToken(user)));
+    }
+    
+    public async Task<IServiceResult<bool>> DeactivateAccount(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return ServiceResult<bool>.Failure("Not found", ServiceErrorType.NotFound);
+        }
+        
+        //soft delete
+        user.IsDeleted = true;
+        user.DeletedOn = DateTime.UtcNow;
+        
+        //invalidate login
+        user.LockoutEnd = DateTimeOffset.MaxValue;
+        
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            return ServiceResult<bool>.Failure("Internal Server Error", ServiceErrorType.InternalError, result.Errors);    
+        }
+        
+        return ServiceResult<bool>.Success(true);
     }
 
     private async Task<string> GenerateJwtToken(ApplicationUser user)
