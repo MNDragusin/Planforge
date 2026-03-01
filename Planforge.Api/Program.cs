@@ -61,6 +61,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseAuthentication();
 app.UseMiddleware<TenantMiddleware>();
 app.UseAuthorization();
