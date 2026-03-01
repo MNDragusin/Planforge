@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Planforge.Application.Common.Enums;
@@ -19,7 +20,7 @@ public class UserAuthService : IUserAuthService
     private readonly AppDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _configuration;
-    
+
     public UserAuthService(AppDbContext context, UserManager<ApplicationUser> userManager, IConfiguration configuration)
     {
         _context = context;
@@ -39,10 +40,12 @@ public class UserAuthService : IUserAuthService
         {
             return ServiceResult<LoginResponse>.Failure("User is deleted", ServiceErrorType.NotFound);
         }
-        
-        return ServiceResult<LoginResponse>.Success(new LoginResponse(await GenerateJwtToken(user)));
+
+        var memberships = await _context.Memberships.Where(m => m.UserId == user.Id)
+            .Select(m => new MembershipDto(m.OrganizationId, m.Role.ToString())).ToListAsync();
+        return ServiceResult<LoginResponse>.Success(new LoginResponse(await GenerateJwtToken(user), memberships));
     }
-    
+
     public async Task<IServiceResult<RegisterResponse>> Register(RegisterRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
@@ -61,21 +64,22 @@ public class UserAuthService : IUserAuthService
 
         var org = new Organization(request.Name + "' Workspace");
         _context.Organizations.Add(org);
-        
+
         var membership = new Membership(user.Id, org.Id, OrganizationRole.Owner);
         _context.Memberships.Add(membership);
-        
+
         await _context.SaveChangesAsync();
-        
+
         if (!result.Succeeded)
         {
             return ServiceResult<RegisterResponse>.Failure("Bad Request", ServiceErrorType.BadRequest, result.Errors);
         }
-        
+
         await _userManager.AddToRoleAsync(user, "Admin");
-        return ServiceResult<RegisterResponse>.Success(new RegisterResponse(await GenerateJwtToken(user)));
+        return ServiceResult<RegisterResponse>.Success(new RegisterResponse(await GenerateJwtToken(user),
+            new MembershipDto(membership.OrganizationId, membership.Role.ToString())));
     }
-    
+
     public async Task<IServiceResult<bool>> DeactivateAccount(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
@@ -83,20 +87,20 @@ public class UserAuthService : IUserAuthService
         {
             return ServiceResult<bool>.Failure("Not found", ServiceErrorType.NotFound);
         }
-        
+
         //soft delete
         user.IsDeleted = true;
         user.DeletedOn = DateTime.UtcNow;
-        
+
         //invalidate login
         user.LockoutEnd = DateTimeOffset.MaxValue;
-        
+
         var result = await _userManager.UpdateAsync(user);
         if (!result.Succeeded)
         {
-            return ServiceResult<bool>.Failure("Internal Server Error", ServiceErrorType.InternalError, result.Errors);    
+            return ServiceResult<bool>.Failure("Internal Server Error", ServiceErrorType.InternalError, result.Errors);
         }
-        
+
         return ServiceResult<bool>.Success(true);
     }
 
@@ -111,10 +115,10 @@ public class UserAuthService : IUserAuthService
             new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
-        
+
         var roles = await _userManager.GetRolesAsync(user);
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
-        
+
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -124,7 +128,7 @@ public class UserAuthService : IUserAuthService
             claims: claims,
             expires: DateTime.UtcNow.AddHours(8),
             signingCredentials: creds);
-        
+
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
