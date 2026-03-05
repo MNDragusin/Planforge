@@ -20,12 +20,14 @@ public class UserAuthService : IUserAuthService
     private readonly AppDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _configuration;
+    private readonly IOrganizationService _organizationService;
 
-    public UserAuthService(AppDbContext context, UserManager<ApplicationUser> userManager, IConfiguration configuration)
+    public UserAuthService(AppDbContext context, UserManager<ApplicationUser> userManager, IConfiguration configuration, IOrganizationService organizationService)
     {
         _context = context;
         _userManager = userManager;
         _configuration = configuration;
+        _organizationService = organizationService;
     }
 
     public async Task<IServiceResult<LoginResponse>> Login(LoginRequest loginRequest)
@@ -59,15 +61,11 @@ public class UserAuthService : IUserAuthService
             UserName = request.Email,
             Email = request.Email
         };
-
+        
         var result = await _userManager.CreateAsync(user, request.Password);
 
-        var org = new Organization(request.Name + "' Workspace");
-        _context.Organizations.Add(org);
-
-        var membership = new Membership(user.Id, org.Id, OrganizationRole.Owner);
-        _context.Memberships.Add(membership);
-
+        var organizationResponse = await _organizationService.CreateOrganization(user.DisplayName, user.Id);
+            
         await _context.SaveChangesAsync();
 
         if (!result.Succeeded)
@@ -77,7 +75,7 @@ public class UserAuthService : IUserAuthService
 
         await _userManager.AddToRoleAsync(user, "Admin");
         return ServiceResult<RegisterResponse>.Success(new RegisterResponse(await GenerateJwtToken(user),
-            new MembershipDto(membership.OrganizationId, membership.Role.ToString())));
+            organizationResponse.Result.));
     }
 
     public async Task<IServiceResult<bool>> DeactivateAccount(string userId)
