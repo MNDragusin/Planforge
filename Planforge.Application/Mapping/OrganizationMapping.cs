@@ -7,15 +7,12 @@ public static class OrganizationMapping
 {
     public static OrganizationDto ToDto(this Organization organization)
     {
-        return new OrganizationDto()
-        {
-            
-        }
+        throw new NotImplementedException("The method Organization.ToDto is not implemented.");
     }
 
     public static Organization ToEntity(this OrganizationDto dto)
     {
-        
+        throw new NotImplementedException("The method OrganizationDto.ToEntity is not implemented.");
     }
 
     public static Membership ToEntity(this MembershipDto dto, Guid userId)

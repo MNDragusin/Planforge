@@ -2,13 +2,14 @@ using Microsoft.Extensions.Configuration;
 using Planforge.Application.Common.Enums;
 using Planforge.Application.Common.Interfaces;
 using Planforge.Application.DTOs;
+using Planforge.Application.Mapping;
 using Planforge.Domain.Entities;
 using Planforge.Domain.Enums;
 using Planforge.Infrastructure.Persistence;
 
 namespace Planforge.Application.Services;
 
-public class OrganizationService
+public class OrganizationService : IOrganizationService
 {
     private readonly AppDbContext _context;
     private IConfiguration _configuration;
@@ -19,7 +20,7 @@ public class OrganizationService
         _configuration = configuration;
     }
 
-    public async Task<IServiceResult<OrganizationDto>> CreateOrganization(string name, Guid ownerId)
+    public async Task<IServiceResult<MembershipDto>> CreateOrganization(string name, Guid ownerId)
     {
         var newOrganization = new Organization(name + "' Workspace");
         var membership = AddMember_Internal(ownerId, newOrganization.Id, OrganizationRole.Owner);
@@ -28,8 +29,8 @@ public class OrganizationService
         _context.Organizations.Add(newOrganization);
         var result = await _context.SaveChangesAsync();
         return result == 0
-            ? ServiceResult<OrganizationDto>.Failure("Internal error", ServiceErrorType.InternalError)
-            : ServiceResult<OrganizationDto>.Success();
+            ? ServiceResult<MembershipDto>.Failure("Internal error", ServiceErrorType.InternalError)
+            : ServiceResult<MembershipDto>.Success(membership.ToDto());
     }
 
     public async Task<IServiceResult<MembershipDto>> AddMember(Guid userId, Guid organizationId,
@@ -40,7 +41,7 @@ public class OrganizationService
         var result = await _context.SaveChangesAsync();
         return result == 0
             ? ServiceResult<MembershipDto>.Failure("Internal error", ServiceErrorType.InternalError)
-            : ServiceResult<MembershipDto>.Success();
+            : ServiceResult<MembershipDto>.Success(membership.ToDto());
     }
 
     private Membership AddMember_Internal(Guid userId, Guid organizationId, OrganizationRole role)

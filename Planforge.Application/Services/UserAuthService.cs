@@ -40,11 +40,11 @@ public class UserAuthService : IUserAuthService
 
         if (user.IsDeleted)
         {
-            return ServiceResult<LoginResponse>.Failure("User is deleted", ServiceErrorType.NotFound);
+            return ServiceResult<LoginResponse>.Failure("User was deleted", ServiceErrorType.NotFound);
         }
 
         var memberships = await _context.Memberships.Where(m => m.UserId == user.Id)
-            .Select(m => new MembershipDto(m.OrganizationId, m.Role.ToString())).ToListAsync();
+            .Select(m => new MembershipDto(m.OrganizationId, m.Role)).ToListAsync();
         return ServiceResult<LoginResponse>.Success(new LoginResponse(await GenerateJwtToken(user), memberships));
     }
 
@@ -65,7 +65,11 @@ public class UserAuthService : IUserAuthService
         var result = await _userManager.CreateAsync(user, request.Password);
 
         var organizationResponse = await _organizationService.CreateOrganization(user.DisplayName, user.Id);
-            
+        if (!organizationResponse.IsSuccessful)
+        {
+            return ServiceResult<RegisterResponse>.Failure("Internal Error", ServiceErrorType.InternalError, organizationResponse.Errors);
+        }
+        
         await _context.SaveChangesAsync();
 
         if (!result.Succeeded)
@@ -75,7 +79,7 @@ public class UserAuthService : IUserAuthService
 
         await _userManager.AddToRoleAsync(user, "Admin");
         return ServiceResult<RegisterResponse>.Success(new RegisterResponse(await GenerateJwtToken(user),
-            organizationResponse.Result.));
+            organizationResponse.Result!));
     }
 
     public async Task<IServiceResult<bool>> DeactivateAccount(string userId)

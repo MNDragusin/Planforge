@@ -5,7 +5,7 @@ namespace Planforge.Application.Common.Interfaces;
 
 public interface IOrganizationService
 {
-    public Task<IServiceResult<OrganizationDto>> CreateOrganization(string name, Guid ownerId);
+    public Task<IServiceResult<MembershipDto>> CreateOrganization(string name, Guid ownerId);
 
     public Task<IServiceResult<MembershipDto>> AddMember(Guid userId, Guid organizationId,
         OrganizationRole role = OrganizationRole.Viewer);
