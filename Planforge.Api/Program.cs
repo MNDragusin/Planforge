@@ -46,20 +46,22 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
-    if (!await roleManager.RoleExistsAsync("Admin"))
+    using (var scope = app.Services.CreateScope())
     {
-        await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
-    }
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
-    if (!await roleManager.RoleExistsAsync("User"))
-    {
-        await roleManager.CreateAsync(new IdentityRole<Guid>("User"));
-    }
-}
+        if (!await roleManager.RoleExistsAsync("Admin"))
+        {
+            await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
+        }
+
+        if (!await roleManager.RoleExistsAsync("User"))
+        {
+            await roleManager.CreateAsync(new IdentityRole<Guid>("User"));
+        }
+    }    
+
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseAuthentication();
@@ -79,3 +81,5 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.Run();
+
+public partial class Program{ }
