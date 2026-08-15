@@ -16,7 +16,7 @@ public class CurrentTenantService : ICurrentTenant
     {
         get
         {
-            var orgId = _httpContextAccessor.HttpContext?.Request.Headers["OrganizationId"].FirstOrDefault();
+            var orgId = _httpContextAccessor.HttpContext?.Request.Headers["X-Organization-Id"].FirstOrDefault();
             return Guid.TryParse(orgId, out Guid id) ? id : null;
         }
     }
