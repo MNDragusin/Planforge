@@ -8,8 +8,6 @@ using Microsoft.IdentityModel.Tokens;
 using Planforge.Application.Common.Enums;
 using Planforge.Application.Common.Interfaces;
 using Planforge.Application.DTOs;
-using Planforge.Domain.Entities;
-using Planforge.Domain.Enums;
 using Planforge.Infrastructure.Identity;
 using Planforge.Infrastructure.Persistence;
 
@@ -61,7 +59,7 @@ public class UserAuthService : IUserAuthService
             UserName = request.Email,
             Email = request.Email
         };
-        
+
         var result = await _userManager.CreateAsync(user, request.Password);
 
         var organizationResponse = await _organizationService.CreateOrganization(user.DisplayName, user.Id);
@@ -69,7 +67,7 @@ public class UserAuthService : IUserAuthService
         {
             return ServiceResult<RegisterResponse>.Failure("Internal Error", ServiceErrorType.InternalError, organizationResponse.Errors);
         }
-        
+
         await _context.SaveChangesAsync();
 
         if (!result.Succeeded)
@@ -89,7 +87,7 @@ public class UserAuthService : IUserAuthService
         {
             return ServiceResult<UserDetails>.Failure("Not found", ServiceErrorType.NotFound);
         }
-        
+
         return ServiceResult<UserDetails>.Success(new UserDetails(user.Id, user.DisplayName, user.Email));
     }
 
