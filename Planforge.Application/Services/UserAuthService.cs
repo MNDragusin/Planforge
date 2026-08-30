@@ -82,6 +82,17 @@ public class UserAuthService : IUserAuthService
             organizationResponse.Result!));
     }
 
+    public async Task<IServiceResult<UserDetails>> GetActiveUser(string emailAddress)
+    {
+        var user = await _userManager.FindByEmailAsync(emailAddress);
+        if (user == null)
+        {
+            return ServiceResult<UserDetails>.Failure("Not found", ServiceErrorType.NotFound);
+        }
+        
+        return ServiceResult<UserDetails>.Success(new UserDetails(user.Id, user.DisplayName, user.Email));
+    }
+
     public async Task<IServiceResult<bool>> DeactivateAccount(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);

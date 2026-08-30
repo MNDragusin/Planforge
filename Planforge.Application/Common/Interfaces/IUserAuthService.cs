@@ -7,4 +7,5 @@ public interface IUserAuthService
     Task<IServiceResult<LoginResponse>> Login(LoginRequest loginRequest);
     Task<IServiceResult<bool>> DeactivateAccount(string userId);
     Task<IServiceResult<RegisterResponse>> Register(RegisterRequest request);
+    Task<IServiceResult<UserDetails>> GetActiveUser(string emailAddress);
 }

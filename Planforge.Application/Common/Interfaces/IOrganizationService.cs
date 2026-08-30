@@ -9,4 +9,5 @@ public interface IOrganizationService
 
     public Task<IServiceResult<MembershipDto>> AddMember(Guid userId, Guid organizationId,
         OrganizationRole role = OrganizationRole.Viewer);
+    Task<IServiceResult<List<MembershipDto>>> GetAllUser(Guid organizationId);
 }

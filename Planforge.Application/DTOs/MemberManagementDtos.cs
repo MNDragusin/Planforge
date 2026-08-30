@@ -1,3 +1,3 @@
 namespace Planforge.Application.DTOs;
 
-public record InviteRequest(string newMemberEmail, string role);
+public record InviteRequest(string name, string newMemberEmail, string role);

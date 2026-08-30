@@ -9,7 +9,7 @@ namespace Planforge.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController: ControllerBase
+public class AuthController: BaseCustomController
 {
     private readonly IUserAuthService _userAuthService;
 
@@ -68,27 +68,5 @@ public class AuthController: ControllerBase
         }
         
         return Ok("Account has been deleted");
-    }
-
-    private IActionResult MapToErrorActionResult<T>(IServiceResult<T> result)
-    {
-        switch (result.ErrorType)
-        {
-            case ServiceErrorType.BadRequest:
-                return BadRequest(result.Errors);
-            case ServiceErrorType.NotFound:
-                return NotFound(result.Message);
-                break;
-            case ServiceErrorType.Unauthorized:
-                return Unauthorized(result.Message);
-                break;
-            case ServiceErrorType.InternalError:
-                return ValidationProblem(result.Message);
-                break;
-            default:
-                break;
-        }
-
-        throw new NotImplementedException();
     }
 }

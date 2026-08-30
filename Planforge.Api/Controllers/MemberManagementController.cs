@@ -7,15 +7,17 @@ namespace Planforge.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class MemberManagementController : ControllerBase
+public class MemberManagementController : BaseCustomController
 {
     private readonly IUserAuthService _userAuthService;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IOrganizationService _organizationService;
 
-    public MemberManagementController(IUserAuthService userAuthService, ICurrentTenant currentTenant)
+    public MemberManagementController(IUserAuthService userAuthService, ICurrentTenant currentTenant,  IOrganizationService organizationService)
     {
         _userAuthService = userAuthService;
         _currentTenant = currentTenant;
+        _organizationService = organizationService;
     }
 
     [HttpPost("newMember")]
@@ -23,67 +25,81 @@ public class MemberManagementController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public Task<IActionResult> InviteNewMember(InviteRequest request)
-    {
-        //_currentTenant.organizationId
-        //due to the tenantMiddleware this is redundant, but we need to have access to the organizationId anyway
-        if (!Request.Headers.TryGetValue("X-Organization-Id", out var organizationId))
+    public async Task<IActionResult> InviteNewMember(InviteRequest request)
+    { 
+        var userDetailsResponse = await _userAuthService.GetActiveUser(request.newMemberEmail);
+
+        if (!userDetailsResponse.IsSuccessful)
         {
-            return Task.FromResult<IActionResult>(BadRequest());
+            //TODO this should send an email for login and password setup 
+            RegisterRequest regRequest = new RegisterRequest(request.name, request.newMemberEmail, "generatedPassword12#$"); //TODO generate a one time password 
+            var regResult = await _userAuthService.Register(regRequest);
+            
+            if (regResult.IsSuccessful)
+            {
+                userDetailsResponse = await _userAuthService.GetActiveUser(request.newMemberEmail);
+            }
+            else
+            {
+                return MapToErrorActionResult(regResult);
+            }
         }
-
-        /*
-            1. Check if the user exists or not
-            2. Create user if it doesnt exist
-            3. Add the current organization to the new user
-        */
-        throw new NotImplementedException();
+        
+        await _organizationService.AddMember(userDetailsResponse.Result.Id, (Guid)_currentTenant.OrganizationId!);
+        return Ok();
     }
-
-    //TODO InviteRequest should work here as well as a parameter
-    [HttpDelete("removeMember")]
-    public void RemoveMember()
-    {
-        /*
-            1. Remove role from provided user
-        */
-        throw new NotImplementedException();
-    }
-
+    
     //TODO
     [HttpGet("getMembers")]
-    public void GetMembers()
+    [ProducesResponseType(typeof(List<MembershipDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMembers()
     {
-        throw new NotImplementedException();
+        var allUsersResult = await _organizationService.GetAllUser((Guid)_currentTenant.OrganizationId);
+        if (!allUsersResult.IsSuccessful)
+        {
+            return MapToErrorActionResult(allUsersResult);
+        }
+        
+        return Ok(allUsersResult.Result);
     }
-
-    [HttpGet("getMember")]
-    public void GetMember()
-    {
-        throw new NotImplementedException();
-    }
-
-    [HttpGet("getRoles")]
-    public void GetRoles()
-    {
-        throw new NotImplementedException();
-    }
-
-    [HttpPost("addRole")]
-    public void AddRole()
-    {
-        throw new NotImplementedException();
-    }
-
-    [HttpDelete("removeRole")]
-    public void RemoveRole()
-    {
-        throw new NotImplementedException();
-    }
-
-    [HttpPost("editMember")]
-    public void UpdateMember()
-    {
-        throw new NotImplementedException();
-    }
+    
+    //TODO InviteRequest should work here as well as a parameter
+    // [HttpDelete("removeMember")]
+    // public void RemoveMember()
+    // {
+    //     /*
+    //         1. Remove role from provided user
+    //     */
+    //     throw new NotImplementedException();
+    // }
+    //
+    // [HttpGet("getMember")]
+    // public void GetMember()
+    // {
+    //     throw new NotImplementedException();
+    // }
+    //
+    // [HttpGet("getRoles")]
+    // public void GetRoles()
+    // {
+    //     throw new NotImplementedException();
+    // }
+    //
+    // [HttpPost("addRole")]
+    // public void AddRole()
+    // {
+    //     throw new NotImplementedException();
+    // }
+    //
+    // [HttpDelete("removeRole")]
+    // public void RemoveRole()
+    // {
+    //     throw new NotImplementedException();
+    // }
+    //
+    // [HttpPost("editMember")]
+    // public void UpdateMember()
+    // {
+    //     throw new NotImplementedException();
+    // }
 }

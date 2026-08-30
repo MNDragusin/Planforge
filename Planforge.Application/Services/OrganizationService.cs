@@ -44,6 +44,18 @@ public class OrganizationService : IOrganizationService
             : ServiceResult<MembershipDto>.Success(membership.ToDto());
     }
 
+    public async Task<IServiceResult<List<MembershipDto>>> GetAllUser(Guid organizationId)
+    {
+        var memberships=  _context.Memberships.Where(x => x.OrganizationId == organizationId);
+        List<MembershipDto> dtoList = new List<MembershipDto>();
+        foreach (var membership in memberships)
+        {
+            dtoList.Add(membership.ToDto());
+        }
+        
+        return ServiceResult<List<MembershipDto>>.Success(dtoList);
+    }
+
     private Membership AddMember_Internal(Guid userId, Guid organizationId, OrganizationRole role)
     {
         var membership = new Membership(userId, organizationId, role);
