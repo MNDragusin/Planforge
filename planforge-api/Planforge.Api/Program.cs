@@ -10,6 +10,17 @@ using Planforge.Application.Common.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+string allowedSpecificOrigins = "AllowSpecificOrigins";
+string[]? allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+
+builder.Services.AddCors(option =>
+{
+    option.AddPolicy(allowedSpecificOrigins, policy =>
+    {
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -46,21 +57,22 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+app.UseCors(allowedSpecificOrigins);
 
-    using (var scope = app.Services.CreateScope())
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+    if (!await roleManager.RoleExistsAsync("Admin"))
     {
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+        await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
+    }
 
-        if (!await roleManager.RoleExistsAsync("Admin"))
-        {
-            await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
-        }
-
-        if (!await roleManager.RoleExistsAsync("User"))
-        {
-            await roleManager.CreateAsync(new IdentityRole<Guid>("User"));
-        }
-    }    
+    if (!await roleManager.RoleExistsAsync("User"))
+    {
+        await roleManager.CreateAsync(new IdentityRole<Guid>("User"));
+    }
+}
 
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -82,4 +94,4 @@ app.UseHttpsRedirection();
 
 app.Run();
 
-public partial class Program{ }
+public partial class Program { }
