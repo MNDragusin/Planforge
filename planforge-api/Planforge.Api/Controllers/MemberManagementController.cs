@@ -13,7 +13,7 @@ public class MemberManagementController : BaseCustomController
     private readonly ICurrentTenant _currentTenant;
     private readonly IOrganizationService _organizationService;
 
-    public MemberManagementController(IUserAuthService userAuthService, ICurrentTenant currentTenant,  IOrganizationService organizationService)
+    public MemberManagementController(IUserAuthService userAuthService, ICurrentTenant currentTenant, IOrganizationService organizationService)
     {
         _userAuthService = userAuthService;
         _currentTenant = currentTenant;
@@ -26,7 +26,7 @@ public class MemberManagementController : BaseCustomController
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> InviteNewMember(InviteRequest request)
-    { 
+    {
         var userDetailsResponse = await _userAuthService.GetActiveUser(request.newMemberEmail);
 
         if (!userDetailsResponse.IsSuccessful)
@@ -34,7 +34,7 @@ public class MemberManagementController : BaseCustomController
             //TODO this should send an email for login and password setup 
             RegisterRequest regRequest = new RegisterRequest(request.name, request.newMemberEmail, "generatedPassword12#$"); //TODO generate a one time password 
             var regResult = await _userAuthService.Register(regRequest);
-            
+
             if (regResult.IsSuccessful)
             {
                 userDetailsResponse = await _userAuthService.GetActiveUser(request.newMemberEmail);
@@ -44,37 +44,36 @@ public class MemberManagementController : BaseCustomController
                 return MapToErrorActionResult(regResult);
             }
         }
-        
-        await _organizationService.AddMember(userDetailsResponse.Result.Id, (Guid)_currentTenant.OrganizationId!);
+
+        await _organizationService.AddMember(userDetailsResponse.Result.Id, _currentTenant.OrganizationId!);
         return Ok();
     }
-    
+
     //TODO
     [HttpGet("getMembers")]
     [ProducesResponseType(typeof(List<MembershipDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMembers()
     {
-        var allUsersResult = await _organizationService.GetAllUser((Guid)_currentTenant.OrganizationId);
+        var allUsersResult = await _organizationService.GetAllUser(_currentTenant.OrganizationId);
         if (!allUsersResult.IsSuccessful)
         {
             return MapToErrorActionResult(allUsersResult);
         }
-        
+
         return Ok(allUsersResult.Result);
     }
-    
-    //TODO InviteRequest should work here as well as a parameter
-    // [HttpDelete("removeMember")]
-    // public void RemoveMember()
-    // {
-    //     /*
-    //         1. Remove role from provided user
-    //     */
-    //     throw new NotImplementedException();
-    // }
+
+
+    [HttpDelete("removeMember")]
+    public async Task<IActionResult> RemoveMember(Guid userId)
+    {
+        var result = await _organizationService.RemoveUser(userId, _currentTenant.OrganizationId);
+        return MapToErrorActionResult<bool>(result);
+    }
+
     //
-    // [HttpGet("getMember")]
-    // public void GetMember()
+    // [HttpGet("getMemberDetails")]
+    // public void GetMemberDetails()
     // {
     //     throw new NotImplementedException();
     // }

@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Planforge.Application.Common.Enums;
 using Planforge.Application.Common.Interfaces;
 using Planforge.Application.DTOs;
 
@@ -9,7 +8,7 @@ namespace Planforge.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController: BaseCustomController
+public class AuthController : BaseCustomController
 {
     private readonly IUserAuthService _userAuthService;
 
@@ -28,7 +27,7 @@ public class AuthController: BaseCustomController
         {
             return MapToErrorActionResult(result);
         }
-        
+
         return Ok(result.Result);
     }
 
@@ -42,8 +41,14 @@ public class AuthController: BaseCustomController
         {
             return MapToErrorActionResult(registerRespons);
         }
-        
+
         return Ok(registerRespons.Result);
+    }
+
+    public async Task<IActionResult> Logout()
+    {
+        await _userAuthService.Logout();
+        return Ok();
     }
 
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -55,18 +60,18 @@ public class AuthController: BaseCustomController
     public async Task<IActionResult> DeactivateAccount()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
+
         if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized();
         }
         var result = await _userAuthService.DeactivateAccount(userId);
-        
+
         if (!result.IsSuccessful)
         {
             return MapToErrorActionResult(result);
         }
-        
+
         return Ok("Account has been deleted");
     }
 }
