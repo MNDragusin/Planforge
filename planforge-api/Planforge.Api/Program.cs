@@ -7,6 +7,9 @@ using Planforge.Api.Middleware;
 using Planforge.Api.Services;
 using Planforge.Application;
 using Planforge.Application.Common.Interfaces;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Planforge.Infrastructure.Persistence;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +45,27 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtIssuer,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var jti = context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Jti);
+
+            if (string.IsNullOrEmpty(jti))
+            {
+                context.Fail("Token missing Jti claims");
+            }
+
+            // var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+            // var isRevoked = await dbContext.RevokedTokens.AnyAsync(t => t.Jti == jti);
+
+            // if (isRevoked)
+            // {
+            //     context.Fail("Token has been revoked.");
+            // }
+        }
     };
 });
 

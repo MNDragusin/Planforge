@@ -139,7 +139,7 @@ public class UserAuthService : IUserAuthService
             claims: claims,
             expires: DateTime.UtcNow.AddHours(8),
             signingCredentials: creds);
-        _context.UserTokens.AddAsync()
+        //_context.UserTokens.AddAsync()
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
