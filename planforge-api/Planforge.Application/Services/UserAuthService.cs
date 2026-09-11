@@ -143,7 +143,7 @@ public class UserAuthService : IUserAuthService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public Task Logout()
+    public async Task<IServiceResult<bool> Logout()
     {
 
     }

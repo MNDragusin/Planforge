@@ -45,6 +45,8 @@ public class AuthController : BaseCustomController
         return Ok(registerRespons.Result);
     }
 
+    [Authorize]
+    [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
         await _userAuthService.Logout();

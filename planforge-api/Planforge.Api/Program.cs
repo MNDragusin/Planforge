@@ -8,8 +8,8 @@ using Planforge.Api.Services;
 using Planforge.Application;
 using Planforge.Application.Common.Interfaces;
 using Microsoft.IdentityModel.JsonWebTokens;
-using Planforge.Infrastructure.Persistence;
 using System.Security.Claims;
+using Planforge.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,13 +58,13 @@ builder.Services.AddAuthentication(options =>
                 context.Fail("Token missing Jti claims");
             }
 
-            // var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-            // var isRevoked = await dbContext.RevokedTokens.AnyAsync(t => t.Jti == jti);
+            var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+            var isRevoked = await dbContext.RevokedTokens.AnyAsync(t => t.Jti == jti);
 
-            // if (isRevoked)
-            // {
-            //     context.Fail("Token has been revoked.");
-            // }
+            if (isRevoked)
+            {
+                context.Fail("Token has been revoked.");
+            }
         }
     };
 });

@@ -11,7 +11,14 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Default");
+        string connectinStringName = "Default";
+        if (OperatingSystem.IsMacOS())
+        {
+            connectinStringName = "MacOSAlternative";
+        }
+
+        var connectionString = configuration.GetConnectionString(connectinStringName);
+        connectionString = connectionString.Replace("{usr}", Environment.UserName);
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString));

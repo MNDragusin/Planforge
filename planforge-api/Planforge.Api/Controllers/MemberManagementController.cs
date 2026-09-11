@@ -50,6 +50,7 @@ public class MemberManagementController : BaseCustomController
     }
 
     //TODO
+    [Authorize]
     [HttpGet("getMembers")]
     [ProducesResponseType(typeof(List<MembershipDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMembers()
@@ -63,7 +64,7 @@ public class MemberManagementController : BaseCustomController
         return Ok(allUsersResult.Result);
     }
 
-
+    [Authorize]
     [HttpDelete("removeMember")]
     public async Task<IActionResult> RemoveMember(Guid userId)
     {
