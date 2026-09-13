@@ -6,10 +6,12 @@ using Planforge.Infrastructure.Identity;
 
 namespace Planforge.Infrastructure.Persistence;
 
-public class AppDbContext: IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
+public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
 {
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<Organization> Organizations => Set<Organization>();
+
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -21,18 +23,33 @@ public class AppDbContext: IdentityDbContext<ApplicationUser, IdentityRole<Guid>
         {
             // Composite primary key
             entity.HasKey(x => new { x.UserId, x.OrganizationId });
-            
+
             // relation Membership -> ApplicationUser (Identity)
             entity.HasOne<ApplicationUser>()
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             // relation Membership -> Organization
             entity.HasOne<Organization>()
                 .WithMany(x => x.Members)
                 .HasForeignKey(x => x.OrganizationId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.HasOne<ApplicationUser>(x => x.User)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ApplicationUser>(entity =>
+        {
+            entity.HasMany<RefreshToken>(x => x.RefreshTokens);
         });
     }
 }
