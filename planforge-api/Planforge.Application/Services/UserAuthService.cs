@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -43,7 +44,11 @@ public class UserAuthService : IUserAuthService
 
         var memberships = await _context.Memberships.Where(m => m.UserId == user.Id)
             .Select(m => new MembershipDto(m.OrganizationId, m.Role)).ToListAsync();
-        return ServiceResult<LoginResponse>.Success(new LoginResponse(await GenerateJwtToken(user), memberships));
+
+        var accessToken = await GenerateJwtToken(user);
+        var refreshToken = await GenerateAndStoreRefreshToken(user.Id);
+
+        return ServiceResult<LoginResponse>.Success(new LoginResponse(accessToken, refreshToken.Token, memberships));
     }
 
     public async Task<IServiceResult<RegisterResponse>> Register(RegisterRequest request)
@@ -137,14 +142,90 @@ public class UserAuthService : IUserAuthService
             issuer: jwtIssuer,
             audience: null,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(8),
+            expires: DateTime.UtcNow.AddMinutes(5),
             signingCredentials: creds);
-        //_context.UserTokens.AddAsync()
+
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public async Task<IServiceResult<bool>> Logout()
+    private string GenerateRefreshToken()
     {
-        throw new NotImplementedException();
+        var randomBytes = RandomNumberGenerator.GetBytes(64);
+        return Convert.ToBase64String(randomBytes);
+
+    }
+
+    private async Task<RefreshToken> GenerateAndStoreRefreshToken(Guid userId)
+    {
+        var refreshToken = new RefreshToken()
+        {
+            UserId = userId,
+            Token = GenerateRefreshToken(),
+            ExpiresAt = DateTime.UtcNow.AddDays(5)
+        };
+
+        await _context.RefreshTokens.AddAsync(refreshToken);
+        await _context.SaveChangesAsync();
+
+        return refreshToken;
+    }
+
+    public async Task<IServiceResult<bool>> Logout(RefreshRequest request)
+    {
+        _context.RefreshTokens.FirstOrDefaultAsync(t => t.)
+    }
+
+    public async Task<IServiceResult<RefreshResponse>> Refresh(RefreshRequest request)
+    {
+        RefreshToken? existingToken = await _context.RefreshTokens.Include(t => t.User).FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+
+        if (existingToken == null)
+        {
+            return ServiceResult<RefreshResponse>.Failure("Invalid refresh token", ServiceErrorType.Unauthorized);
+        }
+
+        if (!existingToken.IsActive)
+        {
+            //if token is revoked -> revoke all refreshTokens for the current user
+            if (existingToken.RevokedAt != null)
+            {
+                await RevokeAllRefreshTokens(existingToken);
+            }
+
+            return ServiceResult<RefreshResponse>.Failure("Refresh token is no longer valid", ServiceErrorType.Unauthorized);
+        }
+
+        var user = await _userManager.FindByIdAsync(existingToken.UserId.ToString());
+
+        if (user == null || user.IsDeleted)
+        {
+            return ServiceResult<RefreshResponse>.Failure("User not found", ServiceErrorType.NotFound);
+        }
+
+        //revoke old - issue new
+        var newRefreshToken = await GenerateAndStoreRefreshToken(existingToken.UserId);
+        existingToken.RevokedAt = DateTime.UtcNow;
+        existingToken.ReplacedByToken = newRefreshToken.Token;
+
+        var newAccessToken = await GenerateJwtToken(existingToken.User);
+
+        return ServiceResult<RefreshResponse>.Success(new RefreshResponse(newAccessToken, newRefreshToken.Token));
+    }
+
+    private async Task RevokeAllRefreshTokens(RefreshToken existingTokens)
+    {
+        var tokens = existingTokens.User.RefreshTokens;
+
+        foreach (var t in tokens)
+        {
+            if (t.RevokedAt != null)
+            {
+                continue;
+            }
+
+            t.RevokedAt = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
     }
 }

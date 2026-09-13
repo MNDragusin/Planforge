@@ -1,7 +1,9 @@
 namespace Planforge.Application.DTOs;
 
 public record LoginRequest(string Email, string Password);
-public record LoginResponse(string Token, List<MembershipDto> memberships);
+public record LoginResponse(string Token, string RefreshToken, List<MembershipDto> memberships);
 public record RegisterRequest(string Name, string Email, string Password);
 public record RegisterResponse(string Token, MembershipDto membership);
 public record UserDetails(Guid Id, string Name, string Email);
+public record RefreshRequest(string RefreshToken);
+public record RefreshResponse(string AccessToken, string RefreshToken);

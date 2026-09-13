@@ -10,7 +10,6 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
 {
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<Organization> Organizations => Set<Organization>();
-
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -41,15 +40,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
         {
             entity.HasKey(x => x.Id);
 
-            entity.HasOne<ApplicationUser>(x => x.User)
-            .WithMany()
-            .HasForeignKey(x => x.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<ApplicationUser>(entity =>
-        {
-            entity.HasMany<RefreshToken>(x => x.RefreshTokens);
+            entity.HasOne(x => x.User)
+                .WithMany(x => x.RefreshTokens)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

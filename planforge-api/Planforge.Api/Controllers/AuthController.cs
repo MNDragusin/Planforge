@@ -76,4 +76,9 @@ public class AuthController : BaseCustomController
 
         return Ok("Account has been deleted");
     }
+
+    public async Task<IActionResult> Refresh()
+    {
+
+    }
 }

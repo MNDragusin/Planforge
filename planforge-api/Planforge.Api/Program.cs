@@ -59,12 +59,12 @@ builder.Services.AddAuthentication(options =>
             }
 
             var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-            var isRevoked = await dbContext.RevokedTokens.AnyAsync(t => t.Jti == jti);
+            // var isRevoked = await dbContext.RevokedTokens.AnyAsync(t => t.Jti == jti);
 
-            if (isRevoked)
-            {
-                context.Fail("Token has been revoked.");
-            }
+            // if (isRevoked)
+            // {
+            //     context.Fail("Token has been revoked.");
+            // }
         }
     };
 });
