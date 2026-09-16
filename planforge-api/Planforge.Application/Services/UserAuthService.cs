@@ -152,21 +152,24 @@ public class UserAuthService : IUserAuthService
     {
         var randomBytes = RandomNumberGenerator.GetBytes(64);
         return Convert.ToBase64String(randomBytes);
-
     }
 
     private async Task<RefreshToken> GenerateAndStoreRefreshToken(Guid userId)
     {
+        var token = GenerateRefreshToken();
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+
         var refreshToken = new RefreshToken()
         {
             UserId = userId,
-            Token = GenerateRefreshToken(),
+            Token = Convert.ToBase64String(hash),
             ExpiresAt = DateTime.UtcNow.AddDays(5)
         };
 
         await _context.RefreshTokens.AddAsync(refreshToken);
         await _context.SaveChangesAsync();
 
+        refreshToken.Token = token;
         return refreshToken;
     }
 

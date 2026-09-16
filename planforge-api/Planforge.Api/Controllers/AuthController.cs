@@ -77,8 +77,18 @@ public class AuthController : BaseCustomController
         return Ok("Account has been deleted");
     }
 
-    public async Task<IActionResult> Refresh()
+    [HttpPost("refresh")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Refresh(RefreshRequest request)
     {
+        var serviceResult = await _userAuthService.Refresh(request);
+        if (!serviceResult.IsSuccessful)
+        {
+            return MapToErrorActionResult(serviceResult);
+        }
 
+        return Ok(serviceResult.Result);
     }
 }
