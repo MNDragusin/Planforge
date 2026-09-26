@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Planforge.Application.Common.Enums;
@@ -175,7 +176,18 @@ public class UserAuthService : IUserAuthService
 
     public async Task<IServiceResult<bool>> Logout(RefreshRequest request)
     {
-        _context.RefreshTokens.FirstOrDefaultAsync(t => t.)
+        var refreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+
+        if (refreshToken == null || string.IsNullOrEmpty(refreshToken.Id.ToString()))
+        {
+            await _context.SaveChangesAsync();
+            return ServiceResult<bool>.Failure("No valid token", ServiceErrorType.NotFound);
+        }
+
+        refreshToken.RevokedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return ServiceResult<bool>.Success(true);
     }
 
     public async Task<IServiceResult<RefreshResponse>> Refresh(RefreshRequest request)
@@ -230,5 +242,10 @@ public class UserAuthService : IUserAuthService
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    Task<IServiceResult<RefreshToken>> IUserAuthService.Refresh(RefreshRequest request)
+    {
+        throw new NotImplementedException();
     }
 }
