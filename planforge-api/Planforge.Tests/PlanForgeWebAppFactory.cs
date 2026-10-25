@@ -3,25 +3,27 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Planforge.Application.DTOs;
 using Planforge.Infrastructure.Persistence;
+using System.Net.Http.Headers;
 
 namespace Planforge.Tests;
 
-public class PlanForgeWebAppFactory: WebApplicationFactory<Program>, IAsyncLifetime
+public class PlanForgeWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public readonly string TestUser = "test";
     public readonly string TestEmail = "test@test.com";
     public readonly string TestPassword = "iop890IOP*()";
-    
+
     public string Token => LoggedInUser.Token;
     public LoginResponse LoggedInUser { get; set; } = default!;
-    
+    public RefreshResponse RefreshedTokens { get; set; } = default!;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
     }
-    
+
     public async Task InitializeAsync()
-    {  
+    {
         await CleanDatabaseAsync();
     }
 
@@ -29,12 +31,18 @@ public class PlanForgeWebAppFactory: WebApplicationFactory<Program>, IAsyncLifet
     {
         await CleanDatabaseAsync();
     }
-    
+
     private async Task CleanDatabaseAsync()
     {
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Users.RemoveRange(db.Users);
         await db.SaveChangesAsync();
+    }
+
+    public void SetHeaders(HttpClient httpClient)
+    {
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", LoggedInUser.Token);
+        httpClient.DefaultRequestHeaders.Add("X-Organization-Id", LoggedInUser.memberships[0].OrgId.ToString());
     }
 }

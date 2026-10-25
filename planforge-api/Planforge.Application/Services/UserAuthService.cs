@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Planforge.Application.Common.Enums;
@@ -63,7 +62,8 @@ public class UserAuthService : IUserAuthService
         user = new ApplicationUser()
         {
             UserName = request.Email,
-            Email = request.Email
+            Email = request.Email,
+            DisplayName = request.Name
         };
 
         var result = await _userManager.CreateAsync(user, request.Password);
@@ -155,15 +155,19 @@ public class UserAuthService : IUserAuthService
         return Convert.ToBase64String(randomBytes);
     }
 
+    private static string HashRefreshToken(string refreshToekn) =>
+        Convert.ToBase64String(SHA3_256.HashData(Encoding.UTF8.GetBytes(refreshToekn)));
+
+
     private async Task<RefreshToken> GenerateAndStoreRefreshToken(Guid userId)
     {
         var token = GenerateRefreshToken();
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        var hash = HashRefreshToken(token);
 
         var refreshToken = new RefreshToken()
         {
             UserId = userId,
-            Token = Convert.ToBase64String(hash),
+            Token = hash,
             ExpiresAt = DateTime.UtcNow.AddDays(5)
         };
 
@@ -176,7 +180,8 @@ public class UserAuthService : IUserAuthService
 
     public async Task<IServiceResult<bool>> Logout(RefreshRequest request)
     {
-        var refreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+        var refreshHash = HashRefreshToken(request.RefreshToken);
+        var refreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == refreshHash);
 
         if (refreshToken == null || string.IsNullOrEmpty(refreshToken.Id.ToString()))
         {
@@ -192,7 +197,9 @@ public class UserAuthService : IUserAuthService
 
     public async Task<IServiceResult<RefreshResponse>> Refresh(RefreshRequest request)
     {
-        RefreshToken? existingToken = await _context.RefreshTokens.Include(t => t.User).FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+
+        var refreshHash = HashRefreshToken(request.RefreshToken);
+        RefreshToken? existingToken = await _context.RefreshTokens.Include(t => t.User).FirstOrDefaultAsync(t => t.Token == refreshHash);
 
         if (existingToken == null)
         {
@@ -242,10 +249,5 @@ public class UserAuthService : IUserAuthService
         }
 
         await _context.SaveChangesAsync();
-    }
-
-    Task<IServiceResult<RefreshToken>> IUserAuthService.Refresh(RefreshRequest request)
-    {
-        throw new NotImplementedException();
     }
 }

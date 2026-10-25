@@ -23,10 +23,11 @@ public class OrganizationService : IOrganizationService
     public async Task<IServiceResult<MembershipDto>> CreateOrganization(string name, Guid ownerId)
     {
         var newOrganization = new Organization(name + "' Workspace");
-        var membership = await AddMember_Internal(ownerId, newOrganization.Id, OrganizationRole.Owner);
+        _context.Organizations.Add(newOrganization);
+
+        var membership = AddMember_Internal(ownerId, newOrganization.Id, OrganizationRole.Owner);
         newOrganization.Members.Add(membership);
 
-        _context.Organizations.Add(newOrganization);
         var result = await _context.SaveChangesAsync();
         return result == 0
             ? ServiceResult<MembershipDto>.Failure("Internal error", ServiceErrorType.InternalError)
@@ -36,7 +37,7 @@ public class OrganizationService : IOrganizationService
     public async Task<IServiceResult<MembershipDto>> AddMember(Guid userId, Guid organizationId,
         OrganizationRole role = OrganizationRole.Viewer)
     {
-        var membership = await AddMember_Internal(userId, organizationId, role);
+        var membership = AddMember_Internal(userId, organizationId, role);
 
         var result = await _context.SaveChangesAsync();
         return result == 0
@@ -56,12 +57,10 @@ public class OrganizationService : IOrganizationService
         return ServiceResult<List<MembershipDto>>.Success(dtoList);
     }
 
-    private async Task<Membership> AddMember_Internal(Guid userId, Guid organizationId, OrganizationRole role)
+    private Membership AddMember_Internal(Guid userId, Guid organizationId, OrganizationRole role)
     {
         var membership = new Membership(userId, organizationId, role);
         var result = _context.Memberships.Add(membership);
-
-        await _context.SaveChangesAsync();
         return result.Entity;
     }
 

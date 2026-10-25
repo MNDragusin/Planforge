@@ -9,6 +9,5 @@ public interface IUserAuthService
     Task<IServiceResult<RegisterResponse>> Register(RegisterRequest request);
     Task<IServiceResult<UserDetails>> GetActiveUser(string emailAddress);
     Task<IServiceResult<bool>> Logout(RefreshRequest request);
-
-    Task<IServiceResult<RefreshToken>> Refresh(RefreshRequest request);
+    Task<IServiceResult<RefreshResponse>> Refresh(RefreshRequest request);
 }
